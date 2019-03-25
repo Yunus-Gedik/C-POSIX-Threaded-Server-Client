@@ -31,7 +31,6 @@ pthread_mutex_t mutex;
 pthread_mutexattr_t mutexattr;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 int totaldone = 0;
-FILE* logfile;
 
 void signalhandler(int sig){
     fprintf( stderr, "Termination signal received.\n");
@@ -40,9 +39,6 @@ void signalhandler(int sig){
     temp=head;
     fprintf( stderr, "Terminating all clients\n");
     fprintf( stderr, "Terminating all providers.\n");
-    
-    fprintf( logfile, "Terminating all clients\n");
-    fprintf( logfile, "Terminating all providers.\n");
     
     temp=head;
     
@@ -58,18 +54,14 @@ void signalhandler(int sig){
     
     fprintf( stderr, "Statistics\n");
     fprintf( stderr, "Name       Number of clients served\n");
-    fprintf( logfile, "Statistics\n");
-    fprintf( logfile, "Name       Number of clients served\n");
     temp = head;
     
     while(temp != NULL){
         fprintf( stderr, "%s           %d\n",temp->name,temp->done);
-        fprintf( logfile, "%s           %d\n",temp->name,temp->done);
         temp = temp->next;
     }
     
     fprintf( stderr, "Goodbye.\n");
-    fprintf( logfile, "Goodbye.\n");
     temp=head;
     while(temp != NULL){
         pthread_kill(temp->thread,SIGKILL);
@@ -151,7 +143,6 @@ void* threadfunction(void* empty){
         while(threadnode->degree[0] == -1){
             if(control){
                 fprintf( stderr, "Provider %s is waiting for tasks.\n",threadnode->name);
-                fprintf( logfile, "Provider %s is waiting for tasks.\n",threadnode->name);
                 control =0 ;
             }
             pthread_cond_wait(&cond,&mutex);
@@ -174,7 +165,6 @@ void* threadfunction(void* empty){
             threadnode->done += 1;
             
             fprintf( stderr, "Provider %s is processing task number %d: %f\n",threadnode->name,totaldone,degree);
-            fprintf( logfile, "Provider %s is processing task number %d: %f\n",threadnode->name,totaldone,degree);
             
             random[0] = 5.0 + (double)rand() / (double)(((double) RAND_MAX)/10.0);
             random[1] = random[0];
@@ -211,7 +201,6 @@ void* threadfunction(void* empty){
         }
         if(threadnode->duration <= 0){
             fprintf( stderr, "Provider %s is logging off...\n",threadnode->name);
-            fprintf( logfile, "Provider %s is logging off...\n",threadnode->name);
             free(threadnode);
             delete(&head,whichnode);
             break;
@@ -257,7 +246,6 @@ int main(int argc,char* argv[]){
     
     if(argc<4){
         fprintf( stderr, "usage error!\n");
-        fprintf( logfile, "usage error!\n");
         exit(1);
     }
     
@@ -265,7 +253,6 @@ int main(int argc,char* argv[]){
     datafp = fopen(argv[2],"r");
     logfile = fopen(argv[3],"w");
     fprintf( stderr, "Logs kept at %s\n",argv[2]);
-    fprintf( logfile, "Logs kept at %s\n",argv[2]);
     
     for(int i=0;i<4;++i){
         fscanf(datafp,"%s,",tempfordata);
@@ -280,15 +267,9 @@ int main(int argc,char* argv[]){
     fprintf( stderr, "   Name    Performance Price Duration\n");
     fprintf( stderr, "-------------------------------------\n");
     
-    fprintf( logfile, "%d provider threads created.\n",threadcount);
-    
-    fprintf( logfile, "   Name    Performance Price Duration\n");
-    fprintf( logfile, "-------------------------------------\n");
-    
     temp = head;
     while(temp != NULL){
         fprintf( stderr, "%8s        %d     %6d %6d  \n",temp->name,temp->performance,temp->price,temp->duration);
-        fprintf( logfile, "%8s        %d     %6d %6d  \n",temp->name,temp->performance,temp->price,temp->duration);
         temp = temp->next;
     }
     
@@ -296,17 +277,14 @@ int main(int argc,char* argv[]){
     
     if(pthread_mutexattr_init(&mutexattr)!=0){
         fprintf( stderr, "phtread_mutexattr_init() error!\n");
-        fprintf( logfile, "phtread_mutexattr_init() error!\n");
         exit(1);
     }
     if(pthread_mutexattr_settype(&mutexattr,PTHREAD_MUTEX_ERRORCHECK)!=0){
         fprintf( stderr, "phtread_mutexattr_settype() error!\n");
-        fprintf( logfile, "phtread_mutexattr_settype() error!\n");
         exit(1);
     }
     if(pthread_mutex_init(&mutex,&mutexattr)!=0){
         fprintf( stderr, "phtread_mutex_init() error!\n");
-        fprintf( logfile, "phtread_mutex_init() error!\n");
         exit(1);
     }
     
@@ -344,7 +322,6 @@ int main(int argc,char* argv[]){
         unlink(argv[1]);
         if (bind (sockfd, (struct sockaddr *) &port, sizeof(struct sockaddr_un)) == -1){
             fprintf( stderr, "bind() error!\n");
-            fprintf( logfile, "bind() error!\n");
             exit(1);
         }
     }
@@ -352,7 +329,6 @@ int main(int argc,char* argv[]){
     //ready to "listen()"
     if(listen(sockfd,9999) == -1){
         fprintf( stderr, "listen() error!\n");
-        fprintf( logfile, "listen() error!\n");
         unlink(argv[1]);
         exit(1);
     }
@@ -370,7 +346,6 @@ int main(int argc,char* argv[]){
     char chosenone[20]="";
     
     fprintf( stderr, "Server is waiting for client connections at port %s\n",argv[1]);
-    fprintf( logfile, "Server is waiting for client connections at port %s\n",argv[1]);
     while(1){
         acceptfd = accept(sockfd,(struct sockaddr *) &sun,&size);
         read(acceptfd,&thestring,sizeof(thestring));
@@ -384,7 +359,6 @@ int main(int argc,char* argv[]){
         pthread_mutex_lock(&mutex);
         
         fprintf( stderr, "Client %s (%s %f) connected,",tempname,temppriority,tempdegree);
-        fprintf( logfile, "Client %s (%s %f) connected,",tempname,temppriority,tempdegree);
         
         if(temppriority[0]=='Q'){
             maxquality = -1;
@@ -451,12 +425,10 @@ int main(int argc,char* argv[]){
         }
         
         fprintf( stderr, "forwarded to provider %s\n",temp->name);
-        fprintf( logfile, "forwarded to provider %s\n",temp->name);
         
         //Wake all threads up
         if(pthread_cond_broadcast(&cond)!=0){
             fprintf( stderr, "broadcast() error!\n");
-            fprintf( logfile, "broadcast() error!\n");
             exit(1);
         }
         pthread_mutex_unlock(&mutex);
