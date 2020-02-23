@@ -1,0 +1,12 @@
+Run these commands consequatively:
+
+make clean
+make
+
+For server:
+         port data_file log_file
+./server 8080 data.dat log.txt
+
+For any client:
+         Identifier  Priority degree IP port
+./client Yunus Q 90 192.168.1.1 8080
