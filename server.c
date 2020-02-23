@@ -251,8 +251,6 @@ int main(int argc,char* argv[]){
     
     
     datafp = fopen(argv[2],"r");
-    logfile = fopen(argv[3],"w");
-    fprintf( stderr, "Logs kept at %s\n",argv[2]);
     
     for(int i=0;i<4;++i){
         fscanf(datafp,"%s,",tempfordata);
@@ -294,7 +292,6 @@ int main(int argc,char* argv[]){
     while(temp != NULL){
         if(pthread_create(&temp->thread,NULL,threadfunction,NULL) != 0){
             fprintf( stderr, "phtread_create() error!\n");
-            fprintf( logfile, "phtread_create() error!\n");
             exit(1);
         }
         temp = temp->next;
@@ -305,7 +302,6 @@ int main(int argc,char* argv[]){
     //Open socket
     if((sockfd = socket(AF_LOCAL,SOCK_STREAM,0))==-1){
         fprintf( stderr, "socket() error!\n");
-        fprintf( logfile, "socket() error!\n");
         exit(1);
     }
     
